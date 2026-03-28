@@ -205,7 +205,7 @@ export default function AssessmentApp() {
       
       const qList = rawQs.map((q: any) => ({
         ...q,
-        type: q.type.toLowerCase().replace(/[\/\-_]/g, '')
+        type: q.type.toLowerCase().replace(/[\/\-_\s]/g, '')
       }));
 
       if (qList.length > 0) {
@@ -251,7 +251,8 @@ export default function AssessmentApp() {
           if (prev === 181 && !hasWarned3Min) {
             toast.warning("Critial Update: 3 minutes remaining!", {
               description: "The evaluation engine will auto-submit when the timer hits zero.",
-              duration: 5000
+              duration: Infinity,
+              action: { label: 'Dismiss', onClick: () => {} }
             })
             setHasWarned3Min(true)
           }
