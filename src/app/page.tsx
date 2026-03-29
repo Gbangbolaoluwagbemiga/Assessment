@@ -622,7 +622,7 @@ export default function AssessmentApp() {
                             selectedRepo: selectedRepo
                           }
 
-                          await fetch('https://assessment-n8n.web3bridge.com/webhook/student/final', {
+                          await fetch('https://assessment-n8n.web3bridge.com/webhook/submit', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(finalPayload)
