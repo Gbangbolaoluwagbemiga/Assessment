@@ -604,14 +604,46 @@ export default function AssessmentApp() {
 
                   <div className="pt-10 flex justify-center pb-12">
                     <button 
-                      onClick={() => {
+                      onClick={async () => {
                         if(!selectedRepo && repos.length > 0) return toast.error("Select a repository.")
-                        localStorage.setItem('web3bridge_assessment_done', 'true')
-                        setStep('success')
+                        
+                        setIsProcessing(true)
+                        setStep('loading')
+                        setLoadingText('> Finalizing architectural evaluation...')
+
+                        try {
+                          const finalPayload = {
+                            candidate: {
+                              fullName: formData.fullName,
+                              email: formData.email,
+                              github: githubUsername
+                            },
+                            answers: answers,
+                            selectedRepo: selectedRepo
+                          }
+
+                          await fetch('https://assessment-n8n.web3bridge.com/webhook/student/final', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(finalPayload)
+                          })
+
+                          localStorage.setItem('web3bridge_assessment_done', 'true')
+                          setStep('success')
+                        } catch (err) {
+                          toast.error("Submission Failure", {
+                            description: "Failed to sync metrics with evaluation cloud. Check your network.",
+                            duration: 5000
+                          })
+                          setStep('repo')
+                        } finally {
+                          setIsProcessing(false)
+                        }
                       }} 
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl px-12 py-5 transition-all flex items-center gap-4 text-sm uppercase italic active:scale-95 shadow-xl shadow-emerald-600/10"
+                      disabled={isProcessing}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl px-12 py-5 transition-all flex items-center gap-4 text-sm uppercase italic active:scale-95 shadow-xl shadow-emerald-600/10 disabled:opacity-50"
                     >
-                      Sync Submission <Send className="w-5 h-5" />
+                      {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Sync Submission <Send className="w-5 h-5" /></>}
                     </button>
                   </div>
                 </motion.div>
