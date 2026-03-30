@@ -67,12 +67,46 @@ export default function AssessmentApp() {
   const [hasWarned3Min, setHasWarned3Min] = useState(false)
 
   // 0. Completion Check
+  // 0. Persistence Logic
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isDone = localStorage.getItem('web3bridge_assessment_done')
-      if (isDone) setIsAlreadyCompleted(true)
+      const isDone = localStorage.getItem('web3bridge_assessment_done') === 'true'
+      setIsAlreadyCompleted(isDone)
+      
+      if (!isDone) {
+        const saved = localStorage.getItem('web3bridge_assessment_session')
+        if (saved) {
+          try {
+            const data = JSON.parse(saved)
+            setFormData(data.formData)
+            setGithubUsername(data.githubUsername)
+            setQuestions(data.questions)
+            setAnswers(data.answers)
+            setCurrentQuestionIndex(data.currentQuestionIndex)
+            setTimeRemaining(data.timeRemaining)
+            setStep(data.step)
+          } catch (e) {
+            // console.error("Failed to restore assessment session", e)
+          }
+        }
+      }
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && step !== 'success' && !isAlreadyCompleted) {
+      const sessionData = {
+        formData,
+        githubUsername,
+        questions,
+        answers,
+        currentQuestionIndex,
+        timeRemaining,
+        step
+      }
+      localStorage.setItem('web3bridge_assessment_session', JSON.stringify(sessionData))
+    }
+  }, [step, formData, githubUsername, questions, answers, currentQuestionIndex, timeRemaining, isAlreadyCompleted])
 
   // 1. Repo Fetching Logic
   const fetchRepos = async (username: string): Promise<boolean> => {
@@ -112,7 +146,7 @@ export default function AssessmentApp() {
       return true
     } catch (err: any) {
       clearTimeout(timeoutId);
-      console.error("Failed to fetch repos:", err)
+      // console.error("Failed to fetch repos:", err)
       const isTimeout = err.name === 'AbortError';
       toast.error(isTimeout ? "GitHub Verification Timeout" : "GitHub Network Error", {
         description: isTimeout 
@@ -202,7 +236,7 @@ export default function AssessmentApp() {
       if (responseText) {
         try {
           data = JSON.parse(responseText);
-          console.log("> n8n Webhook Response:", data);
+          // console.log("> n8n Webhook Response:", data);
         } catch (e) {
           throw new Error("Invalid response format from server.");
         }
@@ -210,11 +244,11 @@ export default function AssessmentApp() {
         throw new Error("Empty response from assessment server.");
       }
 
-      const rawQs = data[0]?.output?.questions || data.questions || (Array.isArray(data) ? data : []);
+      const rawQs = data[0]?.questions || data[0]?.output?.questions || data.questions || (Array.isArray(data) ? data : []);
       
       const qList = rawQs.map((q: any) => ({
         ...q,
-        type: q.type.toLowerCase().replace(/[\/\-_\s]/g, '')
+        type: (q.type || 'multiple_choice').toString().toLowerCase().replace(/[\/\-_\s]/g, '')
       }));
 
       if (qList.length > 0) {
@@ -239,15 +273,19 @@ export default function AssessmentApp() {
 
   // 3. Quiz Handlers
   const handleAnswer = (val: any) => {
-    const qId = questions[currentQuestionIndex].id
-    setAnswers(prev => ({ ...prev, [qId]: val }))
+    setAnswers(prev => ({ ...prev, [curQ.id]: val }))
   }
 
   const nextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1)
-    } else {
+    } else if (answers[curQ.id]) {
       setStep('repo')
+    } else {
+      toast.error("Answer required", {
+        description: "Please provide an answer to proceed to the next challenge.",
+        duration: 3000
+      })
     }
   }
 
@@ -260,8 +298,7 @@ export default function AssessmentApp() {
           if (prev === 181 && !hasWarned3Min) {
             toast.warning("Critial Update: 3 minutes remaining!", {
               description: "The evaluation engine will auto-submit when the timer hits zero.",
-              duration: Infinity,
-              action: { label: 'Dismiss', onClick: () => {} }
+              duration: 5000
             })
             setHasWarned3Min(true)
           }
@@ -521,7 +558,10 @@ export default function AssessmentApp() {
                            {curQ.options?.map((opt: string, i: number) => (
                              <button
                                key={i}
-                               onClick={() => handleAnswer(opt)}
+                               onClick={() => {
+                                 handleAnswer(opt)
+                                 setTimeout(nextQuestion, 400)
+                               }}
                                className={`p-5 rounded-xl border text-left transition-all text-base flex items-center gap-4 ${answers[curQ.id] === opt ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/5'}`}
                              >
                                <div className={`w-7 h-7 rounded-lg border flex items-center justify-center font-black text-xs transition-all ${answers[curQ.id] === opt ? 'bg-indigo-500 border-indigo-400 text-white' : 'bg-black/20 border-white/10 text-gray-600'}`}>
@@ -538,7 +578,10 @@ export default function AssessmentApp() {
                            {(curQ.options && curQ.options.length === 2 ? curQ.options : ['True', 'False']).map((val: any) => (
                              <button
                                key={val.toString()}
-                               onClick={() => handleAnswer(val)}
+                               onClick={() => {
+                                 handleAnswer(val)
+                                 setTimeout(nextQuestion, 400)
+                               }}
                                className={`flex-1 p-6 rounded-xl border text-center transition-all text-lg font-black uppercase tracking-widest italic ${answers[curQ.id] === val ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-white/5 bg-white/[0.03] hover:border-white/10 text-gray-500'}`}
                              >
                                {val.toString()}
@@ -618,7 +661,10 @@ export default function AssessmentApp() {
                               email: formData.email,
                               github: githubUsername
                             },
-                            answers: answers,
+                            results: Object.entries(answers).map(([id, ans]) => ({
+                              questionId: id,
+                              answer: ans
+                            })),
                             selectedRepo: selectedRepo
                           }
 
@@ -629,6 +675,7 @@ export default function AssessmentApp() {
                           })
 
                           localStorage.setItem('web3bridge_assessment_done', 'true')
+                          localStorage.removeItem('web3bridge_assessment_session')
                           setStep('success')
                         } catch (err) {
                           toast.error("Submission Failure", {
