@@ -529,7 +529,18 @@ export default function AssessmentApp() {
               )}
 
               {step === 'assessment' && curQ && (
-                <motion.div key="assessment" variants={variants} initial="initial" animate="animate" exit="exit" className="w-full space-y-12 py-10">
+                <motion.div 
+                  key="assessment" 
+                  variants={variants} 
+                  initial="initial" 
+                  animate="animate" 
+                  exit="exit" 
+                  className="w-full space-y-12 py-10 select-none"
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
                   {/* Header */}
                   <div className="flex justify-between items-center mb-10 pb-6 border-b border-white/5">
                      <div className="flex items-center gap-4">
