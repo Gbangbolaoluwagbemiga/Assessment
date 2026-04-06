@@ -298,7 +298,8 @@ export default function AssessmentApp() {
           if (prev === 181 && !hasWarned3Min) {
             toast.warning("Critial Update: 3 minutes remaining!", {
               description: "The evaluation engine will auto-submit when the timer hits zero.",
-              duration: 5000
+              duration: Infinity,
+              action: { label: 'Dismiss', onClick: () => {} }
             })
             setHasWarned3Min(true)
           }
@@ -564,42 +565,48 @@ export default function AssessmentApp() {
                      </h3>
 
                      <div className="w-full space-y-8">
-                       {(curQ.type === 'mcq' || curQ.type === 'multiplechoice') && (
-                         <div className="grid grid-cols-1 gap-3">
-                           {curQ.options?.map((opt: string, i: number) => (
-                             <button
-                               key={i}
-                               onClick={() => {
-                                 handleAnswer(opt)
-                                 setTimeout(nextQuestion, 400)
-                               }}
-                               className={`p-5 rounded-xl border text-left transition-all text-base flex items-center gap-4 ${answers[curQ.id] === opt ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/5'}`}
-                             >
-                               <div className={`w-7 h-7 rounded-lg border flex items-center justify-center font-black text-xs transition-all ${answers[curQ.id] === opt ? 'bg-indigo-500 border-indigo-400 text-white' : 'bg-black/20 border-white/10 text-gray-600'}`}>
-                                 {String.fromCharCode(65 + i)}
-                               </div>
-                               <span className={`${answers[curQ.id] === opt ? 'font-bold' : 'text-gray-300'}`}>{opt}</span>
-                             </button>
-                           ))}
-                         </div>
-                       )}
+                        {(curQ.type === 'mcq' || curQ.type === 'multiplechoice') && (
+                          <div className="grid grid-cols-1 gap-3">
+                            {curQ.options?.map((opt: string, i: number) => {
+                              const letter = String.fromCharCode(65 + i)
+                              return (
+                                <button
+                                  key={i}
+                                  onClick={() => {
+                                    handleAnswer(letter)
+                                    setTimeout(nextQuestion, 400)
+                                  }}
+                                  className={`p-5 rounded-xl border text-left transition-all text-base flex items-center gap-4 ${answers[curQ.id] === letter ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-white/5 bg-white/[0.03] hover:border-white/10 hover:bg-white/5'}`}
+                                >
+                                  <div className={`w-7 h-7 rounded-lg border flex items-center justify-center font-black text-xs transition-all ${answers[curQ.id] === letter ? 'bg-indigo-500 border-indigo-400 text-white' : 'bg-black/20 border-white/10 text-gray-600'}`}>
+                                    {letter}
+                                  </div>
+                                  <span className={`${answers[curQ.id] === letter ? 'font-bold' : 'text-gray-300'}`}>{opt}</span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
 
-                       {curQ.type === 'truefalse' && (
-                         <div className="flex gap-4 max-w-sm mx-auto">
-                           {(curQ.options && curQ.options.length === 2 ? curQ.options : ['True', 'False']).map((val: any) => (
-                             <button
-                               key={val.toString()}
-                               onClick={() => {
-                                 handleAnswer(val)
-                                 setTimeout(nextQuestion, 400)
-                               }}
-                               className={`flex-1 p-6 rounded-xl border text-center transition-all text-lg font-black uppercase tracking-widest italic ${answers[curQ.id] === val ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-white/5 bg-white/[0.03] hover:border-white/10 text-gray-500'}`}
-                             >
-                               {val.toString()}
-                             </button>
-                           ))}
-                         </div>
-                       )}
+                        {curQ.type === 'truefalse' && (
+                          <div className="flex gap-4 max-w-sm mx-auto">
+                            {(curQ.options && curQ.options.length === 2 ? curQ.options : ['True', 'False']).map((val: any) => {
+                              const booleanValue = val.toString().toUpperCase()
+                              return (
+                                <button
+                                  key={val.toString()}
+                                  onClick={() => {
+                                    handleAnswer(booleanValue)
+                                    setTimeout(nextQuestion, 400)
+                                  }}
+                                  className={`flex-1 p-6 rounded-xl border text-center transition-all text-lg font-black uppercase tracking-widest italic ${answers[curQ.id] === booleanValue ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-white/5 bg-white/[0.03] hover:border-white/10 text-gray-500'}`}
+                                >
+                                  {val.toString()}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
 
                        {(curQ.type === 'fillintheblank' || curQ.type === 'fillinblank') && (
                          <div className="w-full max-w-lg mx-auto">
